@@ -49,13 +49,17 @@
             background-color: #218838;
         }
         #output {
-            white-space: pre-wrap;
+            width: 100%;
+            height: 200px;
             background: #f8f8f8;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            min-height: 100px;
             margin-top: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            overflow-x: auto;
         }
     </style>
 </head>
@@ -66,7 +70,7 @@
         <textarea id="inputCode" placeholder="Paste your LuaU script here..."></textarea>
         <button onclick="obfuscateCode()">Obfuscate</button>
         <label for="output">Obfuscated Code:</label>
-        <div id="output"></div>
+        <textarea id="output" readonly></textarea>
     </div>
 
     <script>
@@ -79,16 +83,71 @@
                 SETTABLE: 13, CALL: 14, RETURN: 15, JMP: 16, MOVE: 17
             };
 
-            // Simple tokenization
+            // Random comments for obfuscation
+            const randomComments = [
+                "-- Xx_CrypticLayer_xX",
+                "-- ShadowedByte42",
+                "-- SecureStackOverflow_1337",
+                "-- LuaUMazeGen_99",
+                "-- ObfuscatedByScope_2025",
+                "-- HiddenInPlainSight"
+            ];
+
+            // Improved tokenization
             function tokenize(code) {
                 const tokens = [];
-                const words = code.match(/\S+|\n/g) || [];
-                for (let i = 0; i < words.length; i++) {
-                    const word = words[i];
-                    if (word === '\n') tokens.push({ type: 'newline' });
-                    else if (/^[a-zA-Z_]\w*$/.test(word)) tokens.push({ type: 'identifier', value: word });
-                    else if (/^\d+$/.test(word)) tokens.push({ type: 'number', value: parseInt(word) });
-                    else tokens.push({ type: 'symbol', value: word });
+                let i = 0;
+                while (i < code.length) {
+                    let char = code[i];
+                    // Skip whitespace
+                    if (/\s/.test(char)) {
+                        i++;
+                        continue;
+                    }
+                    // Handle strings
+                    if (char === '"' || char === "'") {
+                        let str = char;
+                        i++;
+                        while (i < code.length && code[i] !== char) {
+                            if (code[i] === '\\') i++;
+                            str += code[i];
+                            i++;
+                        }
+                        str += code[i];
+                        tokens.push({ type: 'string', value: str });
+                        i++;
+                        continue;
+                    }
+                    // Handle identifiers
+                    if (/[a-zA-Z_]/.test(char)) {
+                        let ident = char;
+                        i++;
+                        while (i < code.length && /[a-zA-Z0-9_]/.test(code[i])) {
+                            ident += code[i];
+                            i++;
+                        }
+                        tokens.push({ type: 'identifier', value: ident });
+                        continue;
+                    }
+                    // Handle numbers
+                    if (/\d/.test(char)) {
+                        let num = char;
+                        i++;
+                        while (i < code.length && /[\d.]/.test(code[i])) {
+                            num += code[i];
+                            i++;
+                        }
+                        tokens.push({ type: 'number', value: parseFloat(num) });
+                        continue;
+                    }
+                    // Handle symbols
+                    let symbol = char;
+                    if (i + 1 < code.length && /[=<>]/.test(char) && /[=>]/.test(code[i + 1])) {
+                        symbol += code[i + 1];
+                        i++;
+                    }
+                    tokens.push({ type: 'symbol', value: symbol });
+                    i++;
                 }
                 return tokens;
             }
@@ -99,15 +158,36 @@
                 const constants = [];
                 const stack = [];
 
-                tokens.forEach(token => {
+                for (let i = 0; i < tokens.length; i++) {
+                    const token = tokens[i];
                     if (token.type === 'identifier') {
                         if (!constants.includes(token.value)) constants.push(token.value);
                         instructions.push({
                             opcode: opcodes.GETGLOBAL,
                             value: constants.indexOf(token.value)
                         });
-                    } else if (token.type === 'number') {
-                        constants.push(token.value);
+                        // Check for function call
+                        if (i + 1 < tokens.length && tokens[i + 1].type === 'symbol' && tokens[i + 1].value === '(') {
+                            let argCount = 0;
+                            i += 2; // Skip '('
+                            while (i < tokens.length && tokens[i].type !== 'symbol' && tokens[i].value !== ')') {
+                                if (tokens[i].type === 'string' || tokens[i].type === 'number') {
+                                    if (!constants.includes(tokens[i].value)) constants.push(tokens[i].value);
+                                    instructions.push({
+                                        opcode: opcodes.MOVE,
+                                        value: constants.indexOf(tokens[i].value)
+                                    });
+                                    argCount++;
+                                }
+                                i++;
+                            }
+                            instructions.push({
+                                opcode: opcodes.CALL,
+                                value: argCount
+                            });
+                        }
+                    } else if (token.type === 'string' || token.type === 'number') {
+                        if (!constants.includes(token.value)) constants.push(token.value);
                         instructions.push({
                             opcode: opcodes.MOVE,
                             value: constants.indexOf(token.value)
@@ -122,7 +202,7 @@
                             instructions.push({ opcode: ops[token.value] });
                         }
                     }
-                });
+                }
 
                 return { instructions, constants };
             }
@@ -143,6 +223,13 @@
                     }
                     return c ^ key;
                 });
+
+                // Generate random comments
+                const commentCount = Math.floor(Math.random() * 5) + 3;
+                let comments = [];
+                for (let i = 0; i < commentCount; i++) {
+                    comments.push(randomComments[Math.floor(Math.random() * randomComments.length)]);
+                }
 
                 // Generate VM interpreter
                 const vmCode = `
@@ -181,6 +268,16 @@
                             elseif op == ${opcodes.GETGLOBAL} then
                                 local idx = instructions[pc]; pc = pc + 1;
                                 stack[#stack+1] = unscramble(constants[idx], key);
+                            elseif op == ${opcodes.CALL} then
+                                local nargs = instructions[pc]; pc = pc + 1;
+                                local func = stack[#stack-nargs];
+                                local args = {};
+                                for i = 1, nargs do
+                                    args[i] = stack[#stack-nargs+i];
+                                    stack[#stack-nargs+i] = nil;
+                                end
+                                stack[#stack-nargs] = nil;
+                                stack[#stack+1] = _G[func](table.unpack(args));
                             elseif op == ${opcodes.MOVE} then
                                 local idx = instructions[pc]; pc = pc + 1;
                                 stack[#stack+1] = unscramble(constants[idx], key);
@@ -191,16 +288,18 @@
                     local instructions = {${bytecodes.join(', ')}};
                     return vm();
                 `;
-                return `(function() ${vmCode} end)()`;
+                // Combine comments and code into one line
+                const oneLineCode = `-- Scopefuscator v1.0.0 -- ${comments.join(' ')} (function() ${vmCode.replace(/\s+/g, ' ')})()`;
+                return oneLineCode;
             }
 
             // Main obfuscation function
             try {
                 const tokens = tokenize(code);
                 const { instructions, constants } = generateVMInstructions(tokens);
-                return `-- Scopefuscator v1.0.0 --\n${encodeVM(instructions, constants)}`;
+                return encodeVM(instructions, constants);
             } catch (e) {
-                return `-- Error: Invalid LuaU script --\n${e.message}`;
+                return `-- Error: Invalid LuaU script -- ${e.message}`;
             }
         }
 
@@ -208,8 +307,23 @@
         function obfuscateCode() {
             const input = document.getElementById('inputCode').value;
             const output = document.getElementById('output');
-            output.textContent = scopefuscator(input);
+            output.value = scopefuscator(input);
         }
+
+        // Prevent selecting text outside the output textarea
+        document.getElementById('output').addEventListener('select', function(e) {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                const textarea = document.getElementById('output');
+                if (!textarea.contains(range.commonAncestorContainer)) {
+                    selection.removeAllRanges();
+                    const newRange = document.createRange();
+                    newRange.selectNodeContents(textarea);
+                    selection.addRange(newRange);
+                }
+            }
+        });
     </script>
 </body>
 </html>

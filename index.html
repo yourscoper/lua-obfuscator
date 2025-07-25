@@ -81,8 +81,9 @@ function obfuscateLua(source, key) {
         const val = Math.floor(Math.random() * 99999);
         return `local ${name}=${val}`;
     }).join(';');
+    // Use a dummy functions definition and call at start to fix nil function error
     return `-- Scopefuscator
-functions();${fakeFuncs.join(';')};${midVars};if hookfunction or hookmetamethod then error("Tampering detected") end;local bit32=bit32 or require("bit32")local function xor(d,k)local r={}for i=1,#d do r[i]=string.char(bit32.bxor(d:byte(i),k))end return table.concat(r)end;local function fromhex(h)return h:gsub("..",function(c)return string.char(tonumber(c,16))end)end;local d=fromhex("${enc}")local f,err=loadstring(xor(d,${key}))if not f then error(err)end return f()`;
+(functions=function()end)();${fakeFuncs.join(';')};${midVars};if hookfunction or hookmetamethod then error("Tampering detected") end;local bit32=bit32 or require("bit32")local function xor(d,k)local r={}for i=1,#d do r[i]=string.char(bit32.bxor(d:byte(i),k))end return table.concat(r)end;local function fromhex(h)return h:gsub("..",function(c)return string.char(tonumber(c,16))end)end;local d=fromhex("${enc}")local f,err=loadstring(xor(d,${key}))if not f then error(err)end return f()`;
 }
 function obfuscateCode() {
     const input = document.getElementById("inputCode").value;

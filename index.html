@@ -2,125 +2,56 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Scopefuscator v.1.1.0</title>
+<title>Scopefuscator v1.2</title>
 <style>
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
-    margin: 0;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-h1 {
-    color: #333;
-}
-.container {
-    width: 100%;
-    max-width: 800px;
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-textarea {
-    width: 100%;
-    height: 200px;
-    margin: 10px 0;
-    padding: 10px;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 14px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    resize: vertical;
-}
-button {
-    padding: 10px 20px;
-    background-color: #28a745;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-}
-button:hover {
-    background-color: #218838;
-}
-#output {
-    width: 100%;
-    height: 200px;
-    background: #f8f8f8;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-top: 10px;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 14px;
-    white-space: pre-wrap;
-    overflow-x: auto;
-}
+body { font-family: monospace; background: #111; color: #0f0; padding: 20px; }
+textarea { width: 100%; height: 250px; background: #000; color: #0f0; padding: 10px; border: 1px solid #0f0; resize: vertical; }
+button { background: #0f0; color: #000; padding: 10px; margin: 10px 0; cursor: pointer; }
 </style>
 </head>
 <body>
-<h1>Scopefuscator - LuaU Obfuscator</h1>
-<div class="container">
-    <label for="inputCode">Enter your LuaU Roblox Script:</label>
-    <textarea id="inputCode" placeholder="Paste your LuaU script here..."></textarea>
-    <button onclick="obfuscateCode()">Obfuscate</button>
-    <label for="output">Obfuscated Code:</label>
-    <textarea id="output" readonly></textarea>
-</div>
+<h1>Scopefuscator UI</h1>
+<textarea id="inputCode" placeholder="Enter Lua code..."></textarea>
+<br />
+<button onclick="obfuscateCode()">Obfuscate</button>
+<br />
+<textarea id="outputCode" readonly></textarea>
+
 <script>
 function obfuscateLua(source, key) {
     const xor = (data, key) => {
-        let res = [];
+        let result = '';
         for (let i = 0; i < data.length; i++) {
-            res.push(String.fromCharCode(data.charCodeAt(i) ^ key));
+            result += String.fromCharCode(data.charCodeAt(i) ^ key);
         }
-        return res.join('');
+        return result;
     };
-    const toHex = str => {
-        let hex = '';
-        for (let i = 0; i < str.length; i++) {
-            hex += ('0' + str.charCodeAt(i).toString(16)).slice(-2);
-        }
-        return hex.toUpperCase();
-    };
-    const encrypted = xor(source, key);
-    const hexEnc = toHex(encrypted);
-    const nonsenseFuncs = [
+    const toHex = str => [...str].map(c => ('0' + c.charCodeAt(0).toString(16)).slice(-2)).join('').toUpperCase();
+    const enc = toHex(xor(source, key));
+    const fakeFuncs = [
         "function useless1()local x=1 for i=1,10 do x=x+i end end",
-        "function scoperIsTheBest()print('Scoper is the best! scoper can make obfuscaty, haha, lol, omg, smh!')end",
-        "function ad()print('Buy ScopeHub Elite, 99% scam free!')end",
+        "function scoperIsTheBest()print('Scoper is the best! haha, lol, omg, smh')end",
+        "function ad()print('Try ScopeHub Pro – kinda not a scam!')end",
         "function confuse(x)return(x*math.random())end",
         "function filler()local a='fuck'local b='shit'end"
     ];
-    const midVars = [];
-    for (let i = 0; i < 100; i++) {
-        const name = "v" + Math.random().toString(36).substring(2, 10);
-        const value = Math.floor(Math.random() * 99999);
-        midVars.push(`local ${name}=${value}`);
-    }
-    const final = `
---Scopefuscator;${nonsenseFuncs.join(";")};${midVars.join(";")};local hookfunction=hookfunction local hookmetamethod=hookmetamethod if hookfunction or hookmetamethod then error("Tampering detected") end local function xor(d,k)local r={}for i=1,#d do r[i]=string.char((d:byte(i)~k))end return table.concat(r)end local function fromhex(h)return(h:gsub("..",function(c)return string.char(tonumber(c,16))end))end local d=fromhex("${hexEnc}") local f,err=loadstring(xor(d,${key})) if not f then error(err)end return f()
-`.replace(/\s+/g,' ');
-    return final;
+    const midVars = Array.from({length: 40}, () => {
+        const n = Math.random().toString(36).substring(2, 10);
+        const v = Math.floor(Math.random() * 99999);
+        return `local ${n}=${v}`;
+    }).join(';');
+    return `-- Scopefuscator
+functions();${fakeFuncs.join(';')};${midVars};if hookfunction or hookmetamethod then error("Tampering detected") end;local bit32=bit32 or require("bit32")local function xor(d,k)local r={}for i=1,#d do r[i]=string.char(bit32.bxor(d:byte(i),k))end return table.concat(r)end;local function fromhex(h)return h:gsub("..",function(c)return string.char(tonumber(c,16))end)end;local d=fromhex("${enc}")local f,err=loadstring(xor(d,${key}))if not f then error(err)end return f()`;
 }
 function obfuscateCode() {
-    const input = document.getElementById('inputCode').value;
-    if (!input) {
-        document.getElementById('output').value = '-- Please enter LuaU code to obfuscate.';
+    const input = document.getElementById("inputCode").value;
+    if (!input.trim()) {
+        document.getElementById("outputCode").value = "-- Paste some code first!";
         return;
     }
     const key = 0xAA;
-    try {
-        const obfuscated = obfuscateLua(input, key);
-        document.getElementById('output').value = obfuscated;
-    } catch (e) {
-        document.getElementById('output').value = '-- Error during obfuscation: ' + e.message;
-    }
+    const result = obfuscateLua(input, key);
+    document.getElementById("outputCode").value = result;
 }
 </script>
 </body>

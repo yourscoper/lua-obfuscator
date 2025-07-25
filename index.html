@@ -56,68 +56,44 @@
 
 <script>
 function obfuscateLua(source, key) {
-    // XOR encrypt function
     const xor = (data, key) => {
-        const result = new Uint8Array(data.length);
+        const result = [];
         for (let i = 0; i < data.length; i++) {
-            result[i] = data.charCodeAt(i) ^ key;
+            result.push(String.fromCharCode(data.charCodeAt(i) ^ key));
         }
-        return String.fromCharCode(...result);
+        return result.join('');
     };
 
-    // Convert string to hex uppercase
-    const toHex = str => {
-        return Array.from(str, c => ('0' + c.charCodeAt(0).toString(16)).slice(-2)).join('').toUpperCase();
+    const toHex = str =>
+        Array.from(str, c => ('0' + c.charCodeAt(0).toString(16)).slice(-2)).join('').toLowerCase();
+
+    const toVM = (data, key) => {
+        return Array.from(data, (c, i) => {
+            const v = c.charCodeAt(0) ^ (key + i % 256);
+            return (Math.random() < 0.5 ? 'A' : 'B') + v.toString(16).padStart(4, '0');
+        }).join('');
     };
 
-    // Generate random string for variable/function names
-    const randStr = () => {
-        const words = ['_fuck', '_shit', '_damn', 'xX', 'Z_', 'Obf', 'Crypt', 'Sneaky', 'Hax', 'Wtf'];
-        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        const len = Math.floor(Math.random() * 8) + 5;
-        let result = words[Math.floor(Math.random() * words.length)];
-        for (let i = 0; i < len; i++) {
-            result += chars[Math.floor(Math.random() * chars.length)];
-        }
-        return result;
+    const junkVar = () => {
+        const prefix = ['_fuck', '_shit', '_damn', '_wtf', 'Hax', 'Obf'];
+        const pool = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let str = prefix[Math.floor(Math.random() * prefix.length)];
+        for (let i = 0; i < 8; i++) str += pool[Math.floor(Math.random() * pool.length)];
+        return str;
     };
 
-    // Generate random junk functions
-    const junkFuncs = Array.from({ length: 5 }, () => {
-        const fnName = randStr();
-        const var1 = randStr();
-        const var2 = randStr();
-        return `local function ${fnName}() local ${var1}=math.random(1,100);local ${var2}=tostring(${var1});for i=1,${Math.floor(Math.random() * 10) + 5} do ${var2}=${var2}..tostring(i) end return ${var2} end`;
-    }).join(';');
+    const enc = xor(source, key);
+    const hexEnc = toHex(enc);
+    const vmCode = toVM(enc, key);
 
-    // Generate random junk variables
-    const junkVars = Array.from({ length: 15 }, () => {
-        return `local ${randStr()}=${Math.floor(Math.random() * 100000)};`;
-    }).join('');
+    const encSafe = hexEnc.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const vmSafe = vmCode.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
-    // Generate random strings for padding
-    const junkStrings = Array.from({ length: 10 }, () => {
-        const len = Math.floor(Math.random() * 20) + 10;
-        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
-        return `"${Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('')}"`;
-    }).join(';');
+    const var1 = junkVar(), var2 = junkVar(), var3 = junkVar(), var4 = junkVar(), var5 = junkVar();
 
-    // Encrypt and encode
-    const encrypted = xor(source, key);
-    const hexEnc = toHex(encrypted);
-    const safeHexEnc = hexEnc.replace(/"/g, '\\"').replace(/\\/g, '\\\\');
+    const final = `local bit32=bit32 or require("bit32")local function ${var1}(d,k,r)for i=1,#d do r=r..string.char(bit32.bxor(d:byte(i),k))end return r end;local function ${var2}(h,r,i,p)for i=1,#h-1,2 do p=tonumber(h:sub(i,i+1),16)r=r..string.char(p)end return r end;local function ${var3}(s,k,i,r,o,p,t)r={}o=0 for i=1,#s,5 do t=s:sub(i,i+4)p=t:sub(1,1)=='A'and 1 or 2 o=(o+p)%256 r[#r+1]=string.char(tonumber(t:sub(2),16)~(k+o))end return table.concat(r)end;if hookfunction or hookmetamethod then error("Tampering Detected")end;local ${var4}=${var1}(${var2}("${encSafe}",'',0,''),${key},'');local ${var5}=${var3}("${vmSafe}",${key},0,{},0,'',0);local f,e=loadstring(${var4})if not f then error("exec error: "..tostring(e))end;f()`;
 
-    // Simple VM instruction set
-    const vmInstructions = Array.from(encrypted, (c, i) => {
-        const op = Math.random() < 0.5 ? 'A' : 'B';
-        const val = c.charCodeAt(0) ^ (key + i % 256);
-        return `${op}${val.toString(16).padStart(4, '0')}`;
-    }).join('');
-
-    // Obfuscated Lua code
-    const code = `-- Scopefuscator v2.2\n\n${junkFuncs}${junkVars}local _=function()if hookfunction or hookmetamethod then error("Anti-tamper: Unauthorized modification detected") end local x=function(d,k,r)for i=1,#d do r=r..string.char(string.byte(d,i)~k)end return r end local h=function(h,r,i,p) for i=1,#h-1,2 do p=tonumber(h:sub(i,i+1),16)r=r..string.char(p)end return r end local v=function(s,k,i,r,o,p,t)r={}o=0 for i=1,#s,5 do t=s:sub(i,i+4)p=t:sub(1,1)=='A'and 1 or 2 o=(o+p)%256 r[#r+1]=string.char(tonumber(t:sub(2),16)~(k+o))end return table.concat(r)end local d=h("${safeHexEnc}",'',0,'')local e=x(d,${key},'')local f,err=loadstring(e)if not f then error("Exec error: "..tostring(err))end local c=v("${vmInstructions}",${key},0,{},0,'',0)f()${junkStrings}\n`;
-
-    return code;
+    return final.replace(/\s+/g, '');
 }
 
 function obfuscateCode() {
@@ -126,7 +102,7 @@ function obfuscateCode() {
         document.getElementById('outputCode').value = '-- Paste some Lua code first!';
         return;
     }
-    const key = 170; // Same key as provided script
+    const key = 170;
     try {
         const result = obfuscateLua(input, key);
         document.getElementById('outputCode').value = result;

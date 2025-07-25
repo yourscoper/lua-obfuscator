@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Scopefuscator v1.4</title>
+<title>Scopefuscator v2.0</title>
 <style>
     body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         background-color: #1e1e1e;
-        color: #e0e0e0;
+        color: #00ff9f;
         margin: 0;
         padding: 40px;
         display: flex;
@@ -49,50 +49,53 @@
 </style>
 </head>
 <body>
-<h1>Scopefuscator v1.4</h1>
+<h1>Scopefuscator v2.0</h1>
 <textarea id="inputCode" placeholder="Paste your LuaU script here..."></textarea>
 <button onclick="obfuscateCode()">Obfuscate</button>
 <textarea id="outputCode" readonly></textarea>
 
 <script>
 function obfuscateLua(source, key) {
-    function xor(data, key) {
+    // XOR encrypt function
+    const xor = (data, key) => {
         let result = '';
         for (let i = 0; i < data.length; i++) {
             result += String.fromCharCode(data.charCodeAt(i) ^ key);
         }
         return result;
-    }
-    function toHex(str) {
-        return Array.from(str).map(c => ('0' + c.charCodeAt(0).toString(16)).slice(-2)).join('');
-    }
-    function randVar(len = 8) {
+    };
+    // Convert string to hex uppercase
+    const toHex = str => [...str].map(c => ('0' + c.charCodeAt(0).toString(16)).slice(-2)).join('').toUpperCase();
+
+    // Generate random var names with letters only
+    const randVar = () => {
         const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        let res = '';
-        for (let i = 0; i < len; i++) {
-            res += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return res;
-    }
-    const junkVars = [];
-    for (let i = 0; i < 40; i++) {
-        junkVars.push(`local ${randVar()}=${Math.floor(Math.random() * 99999)}`);
-    }
-    const junkVarsCode = junkVars.join(';');
-    const junkFuncs = [];
-    for (let i = 0; i < 5; i++) {
-        junkFuncs.push(`function ${randVar()}() local x=0 for i=1,10 do x=x+i end return x end`);
-    }
-    const junkFuncsCode = junkFuncs.join(';');
+        return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    };
+
+    // Junk variables
+    const junkVars = Array.from({ length: 40 }, () => {
+        return `local ${randVar()}=${Math.floor(Math.random() * 99999)}`;
+    }).join(';');
+
+    // Junk functions
+    const junkFuncs = Array.from({ length: 5 }, () => {
+        const fnName = randVar();
+        return `function ${fnName}() local x=0 for i=1,10 do x=x+i end return x end`;
+    }).join(';');
+
     const encrypted = xor(source, key);
     const hexEnc = toHex(encrypted);
     const safeHexEnc = hexEnc.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    // Wrap everything in an anonymous function call to avoid top-level errors
-    const obfuscatedCode =
+
+    // Obfuscated single line Lua code wrapped in anonymous function
+    const code =
 `-- Scopefuscator
 (function()
-(functions=function()end)();${junkFuncsCode};${junkVarsCode};
-if (hookfunction ~= nil) or (hookmetamethod ~= nil) then error("Tampering detected") end;
+(functions=function()end)();
+${junkFuncs};
+${junkVars};
+if hookfunction or hookmetamethod then error("Tampering detected") end;
 local bit32=bit32 or require("bit32");
 local function xor(d,k)local r={}for i=1,#d do r[i]=string.char(bit32.bxor(d:byte(i),k))end return table.concat(r)end;
 local function fromhex(h)return h:gsub("..",function(c)return string.char(tonumber(c,16))end)end;
@@ -101,13 +104,14 @@ local f,err=loadstring(xor(d,${key}));
 if not f then error(err) end
 return f()
 end)()`;
-    return obfuscatedCode;
+
+    return code;
 }
 
 function obfuscateCode() {
     const input = document.getElementById('inputCode').value;
     if (!input.trim()) {
-        document.getElementById('outputCode').value = '-- Paste some code first!';
+        document.getElementById('outputCode').value = '-- Paste some Lua code first!';
         return;
     }
     const key = 0xAA;

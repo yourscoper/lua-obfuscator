@@ -2,19 +2,56 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Scopefuscator v1.2</title>
+<title>Scopefuscator v1.3</title>
 <style>
-body { font-family: monospace; background: #111; color: #0f0; padding: 20px; }
-textarea { width: 100%; height: 250px; background: #000; color: #0f0; padding: 10px; border: 1px solid #0f0; resize: vertical; }
-button { background: #0f0; color: #000; padding: 10px; margin: 10px 0; cursor: pointer; }
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+        margin: 0;
+        padding: 40px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    h1 {
+        margin-bottom: 20px;
+        color: #00ff9f;
+    }
+    textarea {
+        width: 100%;
+        max-width: 800px;
+        height: 220px;
+        background-color: #2c2c2c;
+        color: #00ff9f;
+        border: none;
+        border-radius: 12px;
+        padding: 15px;
+        font-size: 14px;
+        font-family: monospace;
+        resize: vertical;
+        box-shadow: 0 0 5px #00000080;
+    }
+    button {
+        background-color: #00ff9f;
+        color: #1e1e1e;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 24px;
+        font-size: 16px;
+        margin: 20px 0;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    button:hover {
+        background-color: #00d48f;
+    }
 </style>
 </head>
 <body>
-<h1>Scopefuscator UI</h1>
-<textarea id="inputCode" placeholder="Enter Lua code..."></textarea>
-<br />
+<h1>Scopefuscator v1.3</h1>
+<textarea id="inputCode" placeholder="Paste your LuaU script here..."></textarea>
 <button onclick="obfuscateCode()">Obfuscate</button>
-<br />
 <textarea id="outputCode" readonly></textarea>
 
 <script>
@@ -28,17 +65,21 @@ function obfuscateLua(source, key) {
     };
     const toHex = str => [...str].map(c => ('0' + c.charCodeAt(0).toString(16)).slice(-2)).join('').toUpperCase();
     const enc = toHex(xor(source, key));
+    const randVar = () => {
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    };
     const fakeFuncs = [
-        "function useless1()local x=1 for i=1,10 do x=x+i end end",
-        "function scoperIsTheBest()print('Scoper is the best! haha, lol, omg, smh')end",
-        "function ad()print('Try ScopeHub Pro – kinda not a scam!')end",
-        "function confuse(x)return(x*math.random())end",
-        "function filler()local a='fuck'local b='shit'end"
+        "function " + randVar() + "()local x=1 for i=1,10 do x=x+i end end",
+        "function " + randVar() + "()print('Scoper is the best! haha, lol, omg, smh')end",
+        "function " + randVar() + "()print('Try ScopeHub Pro – totally not a scam!')end",
+        "function " + randVar() + "(x)return(x*math.random())end",
+        "function " + randVar() + "()local a='scramble'local b='junk'end"
     ];
-    const midVars = Array.from({length: 40}, () => {
-        const n = Math.random().toString(36).substring(2, 10);
-        const v = Math.floor(Math.random() * 99999);
-        return `local ${n}=${v}`;
+    const midVars = Array.from({ length: 40 }, () => {
+        const name = randVar();
+        const val = Math.floor(Math.random() * 99999);
+        return `local ${name}=${val}`;
     }).join(';');
     return `-- Scopefuscator
 functions();${fakeFuncs.join(';')};${midVars};if hookfunction or hookmetamethod then error("Tampering detected") end;local bit32=bit32 or require("bit32")local function xor(d,k)local r={}for i=1,#d do r[i]=string.char(bit32.bxor(d:byte(i),k))end return table.concat(r)end;local function fromhex(h)return h:gsub("..",function(c)return string.char(tonumber(c,16))end)end;local d=fromhex("${enc}")local f,err=loadstring(xor(d,${key}))if not f then error(err)end return f()`;

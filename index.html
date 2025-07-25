@@ -93,7 +93,6 @@
         const encrypted = xor(source, key);
         const hexEnc = toHex(encrypted);
 
-        // Generate very long nonsense with random vars and junk
         const nonsenseParts = [];
         const nonsenseWords = ["_G","randomString","junkVar","alpha","beta","gamma","delta","epsilon","zeta","eta","theta","iota","kappa","lambda","mu","nu","xi","omicron","pi","rho","sigma","tau","upsilon","phi","chi","psi","omega"];
         for(let i=0; i<150; i++){
@@ -115,8 +114,6 @@
         );
         const nonsense = nonsenseParts.join(";") + ";";
 
-        // VM + anti-tamper + XOR + decode + run all in one line without breaks
-        // Anti-tamper: check debug info length (simple example)
         const coreCode = `
 local debug = debug
 if not debug or type(debug.getinfo) ~= "function" or #debug.getinfo(1).source < 1 then error("Tampering detected") end

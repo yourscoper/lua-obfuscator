@@ -64,10 +64,10 @@
     </style>
 </head>
 <body>
-    <h1>Scopefuscator - v1.0.1</h1>
+    <h1>Scopefuscator - LuaU Obfuscator</h1>
     <div class="container">
-        <label for="inputCode">Enter Script:</label>
-        <textarea id="inputCode" placeholder="Script Here.."></textarea>
+        <label for="inputCode">Enter your LuaU Roblox Script:</label>
+        <textarea id="inputCode" placeholder="Paste your LuaU script here..."></textarea>
         <button onclick="obfuscateCode()">Obfuscate</button>
         <label for="output">Obfuscated Code:</label>
         <textarea id="output" readonly></textarea>
@@ -93,7 +93,7 @@
             const encrypted = xor(source, key);
             const hexEnc = toHex(encrypted);
 
-            // Generate lots of junk code snippets
+            // Generate lots of junk code snippets for 25x length (~500+ snippets)
             const junkSnippets = [
                 "local alpha=math.random(1000)",
                 "local beta='randomString123'",
@@ -119,22 +119,54 @@
                 "local chi=string.char(phi)",
                 "local psi=bit32.bxor(phi,key or 170)",
                 "local omega=psi*42",
-                "for i=1,3 do omega=omega+i end"
+                "for i=1,3 do omega=omega+i end",
+                // Additional junk to reach ~500 lines
             ];
+            
+            // Duplicate junkSnippets to reach ~500 statements
+            const multiplier = 21; // 24 * 21 ~ 504 lines
+            let bigJunk = [];
+            for(let i=0; i < multiplier; i++) {
+                bigJunk = bigJunk.concat(junkSnippets);
+            }
+            
+            // Shuffle bigJunk
+            bigJunk.sort(() => Math.random() - 0.5);
+            
+            // Join with semicolons and ensure all lines end properly
+            const junk = bigJunk.join(";") + ";";
 
-            // Shuffle junk snippets and take first ~20 for longer code
-            const junk = junkSnippets.sort(() => Math.random() - 0.5).slice(0, 20).join(";");
+            // Properly closed and indented functional code
+            const functionalCode = `
+local bit32=bit32 or require("bit32")
+local function xor(data,key)
+  local res={}
+  for i=1,#data do
+    res[i]=string.char(bit32.bxor(data:byte(i),key))
+  end
+  return table.concat(res)
+end
+local function from_hex(hex)
+  return (hex:gsub('..', function(cc)
+    return string.char(tonumber(cc,16))
+  end))
+end
+local hex_enc=${JSON.stringify(hexEnc)}
+local key=${key}
+local encrypted=from_hex(hex_enc)
+local decrypted=xor(encrypted,key)
+local f,err=loadstring(decrypted)
+if not f then error(err) end
+return f()
+`.replace(/\n\s+/g, " ");
 
-            // Minified functional code on one line
-            const functionalCode = `local bit32=bit32 or require("bit32");local function xor(d,k)local r={}for i=1,#d do r[i]=string.char(bit32.bxor(d:byte(i),k))end return table.concat(r)end local function from_hex(h)return(h:gsub('..',function(cc)return string.char(tonumber(cc,16))end))end local hex_enc=${JSON.stringify(hexEnc)};local key=${key};local encrypted=from_hex(hex_enc);local decrypted=xor(encrypted,key);local f,err=loadstring(decrypted)if not f then error(err)end return f()`;
-
-            return `-- Scopefuscator\n${junk};${functionalCode}`;
+            return `-- Scopefuscator\n${junk}\n${functionalCode}`;
         }
 
         function obfuscateCode() {
             const input = document.getElementById('inputCode').value;
             if (!input) {
-                document.getElementById('output').value = '-- Please enter script to obfuscate.';
+                document.getElementById('output').value = '-- Please enter LuaU code to obfuscate.';
                 return;
             }
             const key = 0xAA;

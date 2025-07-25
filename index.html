@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Scopefuscator v1.4</title>
+<title>Scopefuscator v1.3</title>
 <style>
     body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -49,7 +49,7 @@
 </style>
 </head>
 <body>
-<h1>Scopefuscator v1.4</h1>
+<h1>Scopefuscator v1.3</h1>
 <textarea id="inputCode" placeholder="Paste your LuaU script here..."></textarea>
 <button onclick="obfuscateCode()">Obfuscate</button>
 <textarea id="outputCode" readonly></textarea>
@@ -81,9 +81,13 @@ function obfuscateLua(source, key) {
         const val = Math.floor(Math.random() * 99999);
         return `local ${name}=${val}`;
     }).join(';');
-    return `-- Scopefuscator
-(functions=function()end)();${fakeFuncs.join(';')};${midVars};if (hookfunction ~= nil) or (hookmetamethod ~= nil) then error("Tampering detected") end;local bit32=bit32 or require("bit32")local function xor(d,k)local r={}for i=1,#d do r[i]=string.char(bit32.bxor(d:byte(i),k))end return table.concat(r)end;local function fromhex(h)return h:gsub("..",function(c)return string.char(tonumber(c,16))end)end;local d=fromhex("${enc}")local f,err=loadstring(xor(d,${key}))if not f then error(err) end return f()`;
+
+    // Escape the encrypted string to safely embed in Lua string literal
+    const safeEnc = enc.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
+    return `-- Scopefuscator\n(functions=function()end)();${fakeFuncs.join(';')};${midVars};if (hookfunction ~= nil) or (hookmetamethod ~= nil) then error("Tampering detected") end;local bit32=bit32 or require("bit32")local function xor(d,k)local r={}for i=1,#d do r[i]=string.char(bit32.bxor(d:byte(i),k))end return table.concat(r)end;local function fromhex(h)return h:gsub("..",function(c)return string.char(tonumber(c,16))end)end;local d=fromhex("${safeEnc}")local f,err=loadstring(xor(d,${key}))if not f then error(err) end return f()`;
 }
+
 function obfuscateCode() {
     const input = document.getElementById("inputCode").value;
     if (!input.trim()) {

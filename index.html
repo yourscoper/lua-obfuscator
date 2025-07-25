@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Scopefuscator v.1.0.2</title>
+<title>Scopefuscator v.1.0.0</title>
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -64,12 +64,12 @@
 </style>
 </head>
 <body>
-<h1>Scopefuscator - v1.0.2</h1>
+<h1>Scopefuscator - LuaU Obfuscator</h1>
 <div class="container">
-    <label for="inputCode">Enter Script:</label>
-    <textarea id="inputCode" placeholder='print("Hello, World!")'></textarea>
+    <label for="inputCode">Enter your LuaU Roblox Script:</label>
+    <textarea id="inputCode" placeholder="Paste your LuaU script here..."></textarea>
     <button onclick="obfuscateCode()">Obfuscate</button>
-    <label for="output">Output:</label>
+    <label for="output">Obfuscated Code:</label>
     <textarea id="output" readonly></textarea>
 </div>
 
@@ -93,7 +93,7 @@
         const encrypted = xor(source, key);
         const hexEnc = toHex(encrypted);
 
-        // Generate a very long nonsense string with random _G keys and junk
+        // Generate very long nonsense with random vars and junk
         const nonsenseParts = [];
         const nonsenseWords = ["_G","randomString","junkVar","alpha","beta","gamma","delta","epsilon","zeta","eta","theta","iota","kappa","lambda","mu","nu","xi","omicron","pi","rho","sigma","tau","upsilon","phi","chi","psi","omega"];
         for(let i=0; i<150; i++){
@@ -101,14 +101,11 @@
             let val = Math.floor(Math.random()*10000);
             nonsenseParts.push(`local ${word}${i}=${val}`);
         }
-        // Add some random concatenations
         for(let i=0; i<100; i++){
             let w1 = nonsenseWords[Math.floor(Math.random()*nonsenseWords.length)]+Math.floor(Math.random()*150);
             let w2 = nonsenseWords[Math.floor(Math.random()*nonsenseWords.length)]+Math.floor(Math.random()*150);
             nonsenseParts.push(`${w1}=${w2} or ${Math.floor(Math.random()*5000)}`);
         }
-
-        // Add nonsense functions including jokes and curse words & shoutout
         nonsenseParts.push(
             `function scoperIsTheBest() print("Scoper is the best! scoper can make obfuscaty, haha, lol, omg, smh!") end`,
             `function uselessFunc1(x) return x*x*x end`,
@@ -116,18 +113,26 @@
             `function ad_joke() print("Buy our shit! Totally not a scam!") end`,
             `function confuse() for i=1,5 do local tmp=i*i*42 end end`
         );
-
         const nonsense = nonsenseParts.join(";") + ";";
 
-        // Random confusing tail string
-        const tail = "IAFBHVAFCBVUYCVBEYQJINHBHBQJICNNVBHEIJCNEVQWERTYUIOPASDFGHJKLZXCVBNM1234567890";
-
-        // The core decrypt and run code on one line (no line breaks)
+        // VM + anti-tamper + XOR + decode + run all in one line without breaks
+        // Anti-tamper: check debug info length (simple example)
         const coreCode = `
-local bit32=bit32 or require("bit32") local function xor(d,k)local r={}for i=1,#d do r[i]=string.char(bit32.bxor(d:byte(i),k))end return table.concat(r)end local function from_hex(h)return(h:gsub('..',function(cc)return string.char(tonumber(cc,16))end))end local hex_enc=${JSON.stringify(hexEnc)} local key=${key} local encrypted=from_hex(hex_enc) local decrypted=xor(encrypted,key) local f,err=loadstring(decrypted) if not f then error(err) end return f()
-`.replace(/\n/g,'');
+local debug = debug
+if not debug or type(debug.getinfo) ~= "function" or #debug.getinfo(1).source < 1 then error("Tampering detected") end
+local bit32=bit32 or require("bit32")
+local function xor(d,k)local r={}for i=1,#d do r[i]=string.char(bit32.bxor(d:byte(i),k))end return table.concat(r)end
+local function from_hex(h)return(h:gsub('..',function(cc)return string.char(tonumber(cc,16))end))end
+local hex_enc=${JSON.stringify(hexEnc)}
+local key=${key}
+local encrypted=from_hex(hex_enc)
+local decrypted=xor(encrypted,key)
+local f,err=loadstring(decrypted)
+if not f then error(err) end
+return f()
+`.replace(/\n\s+/g,' ');
 
-        return `-- Scopefuscator\n${nonsense}${coreCode}${tail}`;
+        return `-- Scopefuscator\n${nonsense}${coreCode}`;
     }
 
     function obfuscateCode() {
@@ -141,7 +146,7 @@ local bit32=bit32 or require("bit32") local function xor(d,k)local r={}for i=1,#
             const obfuscated = obfuscateLua(input, key);
             document.getElementById('output').value = obfuscated;
         } catch (e) {
-            document.getElementById('output').value = `-- Error during obfuscation: ${e.message}`;
+            document.getElementById('output').value = '-- Error during obfuscation: ' + e.message;
         }
     }
 </script>

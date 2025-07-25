@@ -64,10 +64,10 @@
     </style>
 </head>
 <body>
-    <h1>Scopefuscator - LuaU Obfuscator</h1>
+    <h1>Scopefuscator - v1.0.1</h1>
     <div class="container">
-        <label for="inputCode">Enter your LuaU Roblox Script:</label>
-        <textarea id="inputCode" placeholder="Paste your LuaU script here..."></textarea>
+        <label for="inputCode">Enter Script:</label>
+        <textarea id="inputCode" placeholder="Script Here.."></textarea>
         <button onclick="obfuscateCode()">Obfuscate</button>
         <label for="output">Obfuscated Code:</label>
         <textarea id="output" readonly></textarea>
@@ -93,17 +93,39 @@
             const encrypted = xor(source, key);
             const hexEnc = toHex(encrypted);
 
-            // Junk variables and expressions shuffled randomly to confuse reverse engineers
-            const junk = [
-                "local a=42",
-                "local b='obfuscate'",
-                "local _=function(x)return x end",
-                "local z=3.1415",
-                "local dummy_table={1,2,3,4,5}",
-                "for i=1,#dummy_table do dummy_table[i]=dummy_table[i] end"
-            ].sort(() => Math.random() - 0.5).join(";");
+            // Generate lots of junk code snippets
+            const junkSnippets = [
+                "local alpha=math.random(1000)",
+                "local beta='randomString123'",
+                "local gamma=function(x)return x*x end",
+                "local delta={foo=42, bar='baz'}",
+                "local epsilon=string.reverse(beta)",
+                "local zeta=table.concat({'a','b','c'},'-')",
+                "local eta=0 for i=1,10 do eta=eta+i end",
+                "local theta=#beta*alpha",
+                "local iota=function() return os.time() end",
+                "local kappa=tonumber('1234') or 0",
+                "local lambda=math.floor(math.pi*100)",
+                "local mu={} for i=1,5 do mu[i]=i*i end",
+                "local nu=table.unpack(mu)",
+                "local xi=bit32 and bit32.bxor or function(a,b)return a~b end",
+                "local omicron='Lorem ipsum dolor sit amet'",
+                "local pi=string.gsub(omicron,'o','0')",
+                "local rho=function(s) return s:sub(1,3) end",
+                "local sigma=rho(beta)",
+                "local tau=table.concat({'1','2','3'},',')",
+                "local upsilon=#tau*2",
+                "local phi=tonumber('FF',16)",
+                "local chi=string.char(phi)",
+                "local psi=bit32.bxor(phi,key or 170)",
+                "local omega=psi*42",
+                "for i=1,3 do omega=omega+i end"
+            ];
 
-            // Actual functional code minified on one line
+            // Shuffle junk snippets and take first ~20 for longer code
+            const junk = junkSnippets.sort(() => Math.random() - 0.5).slice(0, 20).join(";");
+
+            // Minified functional code on one line
             const functionalCode = `local bit32=bit32 or require("bit32");local function xor(d,k)local r={}for i=1,#d do r[i]=string.char(bit32.bxor(d:byte(i),k))end return table.concat(r)end local function from_hex(h)return(h:gsub('..',function(cc)return string.char(tonumber(cc,16))end))end local hex_enc=${JSON.stringify(hexEnc)};local key=${key};local encrypted=from_hex(hex_enc);local decrypted=xor(encrypted,key);local f,err=loadstring(decrypted)if not f then error(err)end return f()`;
 
             return `-- Scopefuscator\n${junk};${functionalCode}`;
@@ -112,12 +134,16 @@
         function obfuscateCode() {
             const input = document.getElementById('inputCode').value;
             if (!input) {
-                document.getElementById('output').value = '-- Please enter LuaU code to obfuscate.';
+                document.getElementById('output').value = '-- Please enter script to obfuscate.';
                 return;
             }
             const key = 0xAA;
-            const obfuscated = obfuscateLua(input, key);
-            document.getElementById('output').value = obfuscated;
+            try {
+                const obfuscated = obfuscateLua(input, key);
+                document.getElementById('output').value = obfuscated;
+            } catch (e) {
+                document.getElementById('output').value = `-- Error during obfuscation: ${e.message}`;
+            }
         }
     </script>
 </body>

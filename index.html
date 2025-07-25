@@ -64,59 +64,49 @@
     </style>
 </head>
 <body>
-    <h1>Scopefuscator - v1.0.0</h1>
+    <h1>Scopefuscator - LuaU Obfuscator</h1>
     <div class="container">
-        <label for="inputCode">Enter Script:</label>
-        <textarea id="inputCode" placeholder="Script Here..."></textarea>
+        <label for="inputCode">Enter your LuaU Roblox Script:</label>
+        <textarea id="inputCode" placeholder="Paste your LuaU script here..."></textarea>
         <button onclick="obfuscateCode()">Obfuscate</button>
         <label for="output">Obfuscated Code:</label>
         <textarea id="output" readonly></textarea>
     </div>
 
     <script>
-        function xor(data, key) {
-            let res = [];
-            for (let i = 0; i < data.length; i++) {
-                res.push(String.fromCharCode(data.charCodeAt(i) ^ key));
-            }
-            return res.join('');
-        }
-
-        function toHex(str) {
-            let hex = '';
-            for (let i = 0; i < str.length; i++) {
-                hex += ('0' + str.charCodeAt(i).toString(16)).slice(-2);
-            }
-            return hex.toUpperCase();
-        }
-
         function obfuscateLua(source, key) {
+            const xor = (data, key) => {
+                let res = [];
+                for (let i = 0; i < data.length; i++) {
+                    res.push(String.fromCharCode(data.charCodeAt(i) ^ key));
+                }
+                return res.join('');
+            };
+            const toHex = str => {
+                let hex = '';
+                for (let i = 0; i < str.length; i++) {
+                    hex += ('0' + str.charCodeAt(i).toString(16)).slice(-2);
+                }
+                return hex.toUpperCase();
+            };
+
             const encrypted = xor(source, key);
             const hexEnc = toHex(encrypted);
 
-            return `
-local bit32 = bit32 or require("bit32")
+            // Junk variables and expressions shuffled randomly to confuse reverse engineers
+            const junk = [
+                "local a=42",
+                "local b='obfuscate'",
+                "local _=function(x)return x end",
+                "local z=3.1415",
+                "local dummy_table={1,2,3,4,5}",
+                "for i=1,#dummy_table do dummy_table[i]=dummy_table[i] end"
+            ].sort(() => Math.random() - 0.5).join(";");
 
-local function xor(data, key)
-    local res = {}
-    for i = 1, #data do
-        res[i] = string.char(bit32.bxor(data:byte(i), key))
-    end
-    return table.concat(res)
-end
+            // Actual functional code minified on one line
+            const functionalCode = `local bit32=bit32 or require("bit32");local function xor(d,k)local r={}for i=1,#d do r[i]=string.char(bit32.bxor(d:byte(i),k))end return table.concat(r)end local function from_hex(h)return(h:gsub('..',function(cc)return string.char(tonumber(cc,16))end))end local hex_enc=${JSON.stringify(hexEnc)};local key=${key};local encrypted=from_hex(hex_enc);local decrypted=xor(encrypted,key);local f,err=loadstring(decrypted)if not f then error(err)end return f()`;
 
-local function from_hex(hex)
-    return (hex:gsub('..', function(cc) return string.char(tonumber(cc, 16)) end))
-end
-
-local hex_enc = ${JSON.stringify(hexEnc)}
-local key = ${key}
-local encrypted = from_hex(hex_enc)
-local decrypted = xor(encrypted, key)
-local f, err = loadstring(decrypted)
-if not f then error(err) end
-return f()
-`.trim();
+            return `-- Scopefuscator\n${junk};${functionalCode}`;
         }
 
         function obfuscateCode() {
